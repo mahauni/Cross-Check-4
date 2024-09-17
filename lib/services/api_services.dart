@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:movie_app/common/utils.dart';
 import 'package:movie_app/models/movie_detail_model.dart';
@@ -17,7 +16,7 @@ class ApiServices {
     if (response.statusCode == 200) {
       return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load now playing movies');
+    throw Exception('Failed to load top rated movies');
   }
 
   Future<Result> getNowPlayingMovies() async {
@@ -28,7 +27,7 @@ class ApiServices {
     if (response.statusCode == 200) {
       return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load now playing movies');
+    throw Exception('Failed to load now playing movies');
   }
 
   Future<Result> getUpcomingMovies() async {
@@ -39,7 +38,7 @@ class ApiServices {
     if (response.statusCode == 200) {
       return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load upcoming movies');
+    throw Exception('Failed to load upcoming movies');
   }
 
   Future<MovieDetailModel> getMovieDetail(int movieId) async {
@@ -50,7 +49,7 @@ class ApiServices {
     if (response.statusCode == 200) {
       return MovieDetailModel.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load  movie details');
+    throw Exception('Failed to load movie details');
   }
 
   Future<Result> getMovieRecommendations(int movieId) async {
@@ -61,31 +60,52 @@ class ApiServices {
     if (response.statusCode == 200) {
       return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load  movie details');
+    throw Exception('Failed to load movie recommendations');
   }
 
   Future<Result> getSearchedMovie(String searchText) async {
-    final endPoint = 'search/movie?query=$searchText';
-    final url = '$baseUrl$endPoint';
-    final response = await http.get(Uri.parse(url), headers: {
-      'Authorization':
-          'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3NTAyYjhjMDMxYzc5NzkwZmU1YzBiNGY5NGZkNzcwZCIsInN1YiI6IjYzMmMxYjAyYmE0ODAyMDA4MTcyNjM5NSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.N1SoB26LWgsA33c-5X0DT5haVOD4CfWfRhwpDu9eGkc'
-    });
+    const endPoint = 'search/movie';
+    final query = '&query=$searchText';
+    final url = '$baseUrl$endPoint$key$query';
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      final movies = Result.fromJson(jsonDecode(response.body));
-      return movies;
+      return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load  search movie ');
+    throw Exception('Failed to load search results');
   }
 
   Future<Result> getPopularMovies() async {
     const endPoint = 'movie/popular';
     const url = '$baseUrl$endPoint$key';
 
-    final response = await http.get(Uri.parse(url), headers: {});
+    final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       return Result.fromJson(jsonDecode(response.body));
     }
-    throw Exception('failed to load now playing movies');
+    throw Exception('Failed to load popular movies');
+  }
+
+  Future<List<dynamic>> getMovieGenres() async {
+    const endPoint = 'genre/movie/list';
+    const url = '$baseUrl$endPoint$key';
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['genres'];
+    }
+    throw Exception('Failed to load genres');
+  }
+
+  Future<Result> getMoviesByGenre(int genreId) async {
+    const endPoint = 'discover/movie';
+    final query = '&with_genres=$genreId';
+    final url = '$baseUrl$endPoint$key$query';
+
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      return Result.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load movies by genre');
   }
 }

@@ -126,6 +126,10 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   const SizedBox(
                     height: 30,
                   ),
+                  TextButton(onPressed: () {}, child: Text('data')),
+                  const SizedBox(
+                    height: 30,
+                  ),
                   FutureBuilder(
                     future: movieRecommendationModel,
                     builder: (context, snapshot) {
