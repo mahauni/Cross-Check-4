@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart'; // Adicione esta dependência ao seu pubspec.yaml
 import 'package:movie_app/common/utils.dart';
 import 'package:movie_app/models/movie_detail_model.dart';
 import 'package:movie_app/models/movie_model.dart';
@@ -18,6 +19,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   late Future<MovieDetailModel> movieDetail;
   late Future<Result> movieRecommendationModel;
+  late Future<List<Map<String, dynamic>>> movieTrailers;
 
   @override
   void initState() {
@@ -29,23 +31,22 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     movieDetail = apiServices.getMovieDetail(widget.movieId);
     movieRecommendationModel =
         apiServices.getMovieRecommendations(widget.movieId);
+    movieTrailers = apiServices.getMovieTrailers(widget.movieId);
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
-    print(widget.movieId);
     return Scaffold(
       body: SingleChildScrollView(
-        child: FutureBuilder(
+        child: FutureBuilder<MovieDetailModel>(
           future: movieDetail,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              final movie = snapshot.data;
-
+              final movie = snapshot.data!;
               String genresText =
-                  movie!.genres.map((genre) => genre.name).join(', ');
+                  movie.genres.map((genre) => genre.name).join(', ');
 
               return Column(
                 children: [
@@ -74,6 +75,68 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                           ),
                         ),
                       ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          color: Colors.black.withOpacity(0.7),
+                          padding: const EdgeInsets.all(8.0),
+                          child: FutureBuilder<List<Map<String, dynamic>>>(
+                            future: movieTrailers,
+                            builder: (context, trailerSnapshot) {
+                              if (trailerSnapshot.hasData) {
+                                final trailers = trailerSnapshot.data!;
+                                if (trailers.isNotEmpty) {
+                                  final trailer = trailers.first;
+                                  final trailerUrl =
+                                      'https://www.youtube.com/embed/${trailer['key']}';
+                                  return Row(
+                                    children: [
+                                      const Icon(Icons.play_circle_outline,
+                                          color: Colors.white, size: 24),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Watch Trailer',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 16),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => Scaffold(
+                                                  appBar: AppBar(
+                                                    title:
+                                                        const Text('Trailer'),
+                                                  ),
+                                                  body: WebView(
+                                                    initialUrl: trailerUrl,
+                                                    javascriptMode:
+                                                        JavascriptMode
+                                                            .unrestricted,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          child: const Text('Play'),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                } else {
+                                  return const SizedBox.shrink();
+                                }
+                              }
+                              return const CircularProgressIndicator();
+                            },
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   Padding(
@@ -98,9 +161,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                 color: Colors.grey,
                               ),
                             ),
-                            const SizedBox(
-                              width: 30,
-                            ),
+                            const SizedBox(width: 30),
                             Text(
                               genresText,
                               style: const TextStyle(
@@ -110,9 +171,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(
-                          height: 30,
-                        ),
+                        const SizedBox(height: 30),
                         Text(
                           movie.overview,
                           maxLines: 6,
@@ -123,28 +182,19 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(
-                    height: 30,
-                  ),
-                  TextButton(onPressed: () {}, child: Text('data')),
-                  const SizedBox(
-                    height: 30,
-                  ),
-                  FutureBuilder(
+                  const SizedBox(height: 30),
+                  FutureBuilder<Result>(
                     future: movieRecommendationModel,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        final movie = snapshot.data;
-
-                        return movie!.movies.isEmpty
+                    builder: (context, recommendationSnapshot) {
+                      if (recommendationSnapshot.hasData) {
+                        final recommendations = recommendationSnapshot.data!;
+                        return recommendations.movies.isEmpty
                             ? const SizedBox()
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
                                     "More like this",
-                                    maxLines: 6,
-                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -157,7 +207,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                     shrinkWrap: true,
                                     padding: EdgeInsets.zero,
                                     scrollDirection: Axis.vertical,
-                                    itemCount: movie.movies.length,
+                                    itemCount: recommendations.movies.length,
                                     gridDelegate:
                                         const SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: 3,
@@ -172,14 +222,15 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   MovieDetailPage(
-                                                      movieId: movie
-                                                          .movies[index].id),
+                                                movieId: recommendations
+                                                    .movies[index].id,
+                                              ),
                                             ),
                                           );
                                         },
                                         child: CachedNetworkImage(
                                           imageUrl:
-                                              "$imageUrl${movie.movies[index].posterPath}",
+                                              "$imageUrl${recommendations.movies[index].posterPath}",
                                         ),
                                       );
                                     },
@@ -187,13 +238,13 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                                 ],
                               );
                       }
-                      return const Text("Something Went wrong");
+                      return const Center(child: Text("Something went wrong"));
                     },
                   ),
                 ],
               );
             }
-            return const SizedBox();
+            return const Center(child: CircularProgressIndicator());
           },
         ),
       ),

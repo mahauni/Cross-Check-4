@@ -108,4 +108,18 @@ class ApiServices {
     }
     throw Exception('Failed to load movies by genre');
   }
+
+  Future<List<Map<String, dynamic>>> getMovieTrailers(int movieId) async {
+    final endPoint = 'movie/$movieId/videos';
+    final url = '$baseUrl$endPoint$key&language=en-US';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<Map<String, dynamic>>.from(data['results']);
+    }
+
+    throw Exception('Failed to load trailers');
+  }
 }
